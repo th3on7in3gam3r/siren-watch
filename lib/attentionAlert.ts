@@ -1,41 +1,29 @@
 const VIBRATE_PATTERN = [280, 90, 280, 90, 280, 120, 400];
-const VIBRATE_REPEAT_MS = 2200;
 
-let vibrateTimer: ReturnType<typeof setInterval> | null = null;
 let titleTimer: ReturnType<typeof setInterval> | null = null;
 let savedTitle = "";
-let gestureUnlocked = false;
 
-/** Chrome requires a user gesture before navigator.vibrate. */
-export function unlockAttentionAlertsFromGesture(): void {
-  gestureUnlocked = true;
-}
-
-export function isAttentionGestureUnlocked(): boolean {
-  return gestureUnlocked;
+function hasActiveUserGesture(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const activation = (
+    navigator as Navigator & { userActivation?: { isActive: boolean } }
+  ).userActivation;
+  return activation?.isActive === true;
 }
 
 export function isVibrationSupported(): boolean {
   return typeof navigator !== "undefined" && "vibrate" in navigator;
 }
 
+/** In-page vibration only works during an active user gesture in Chrome. */
 export function startSirenVibration(): void {
-  if (!isVibrationSupported() || !gestureUnlocked) return;
-  stopSirenVibration();
+  if (!isVibrationSupported() || !hasActiveUserGesture()) return;
   navigator.vibrate(VIBRATE_PATTERN);
-  vibrateTimer = setInterval(() => {
-    navigator.vibrate(VIBRATE_PATTERN);
-  }, VIBRATE_REPEAT_MS);
 }
 
 export function stopSirenVibration(): void {
-  if (vibrateTimer !== null) {
-    clearInterval(vibrateTimer);
-    vibrateTimer = null;
-  }
-  if (isVibrationSupported()) {
-    navigator.vibrate(0);
-  }
+  if (!isVibrationSupported()) return;
+  navigator.vibrate(0);
 }
 
 export function startTitleFlash(): void {

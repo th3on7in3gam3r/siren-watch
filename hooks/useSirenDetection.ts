@@ -18,6 +18,8 @@ import {
   getNotificationStatus,
   notifySirenAlert,
   relayPushAlert,
+  startAlertHapticPulse,
+  stopAlertHapticPulse,
   type NotificationStatus,
 } from "@/lib/notifications";
 import { isAlertsSnoozed } from "@/lib/alertSnooze";
@@ -34,7 +36,6 @@ import {
   startSirenAlertTone,
   startTitleFlash,
   stopAllAttentionAlerts,
-  unlockAttentionAlertsFromGesture,
 } from "@/lib/attentionAlert";
 import type { DetectionSettings } from "@/lib/settings";
 import type { HistoryRecord } from "@/lib/detectionHistory";
@@ -153,12 +154,22 @@ export function useSirenDetection({
       status === "alert" && sweepDetected && !isAlertsSnoozed();
     if (active) {
       if (settings.flashAlertEnabled) startTitleFlash();
-      if (settings.hapticAlertEnabled) startSirenVibration();
+      if (settings.hapticAlertEnabled) {
+        if (getNotificationStatus() === "granted") {
+          startAlertHapticPulse();
+        } else {
+          startSirenVibration();
+        }
+      }
       if (settings.soundAlertEnabled) startSirenAlertTone();
     } else {
+      stopAlertHapticPulse();
       stopAllAttentionAlerts();
     }
-    return stopAllAttentionAlerts;
+    return () => {
+      stopAlertHapticPulse();
+      stopAllAttentionAlerts();
+    };
   }, [status, sweepDetected, settingsRef]);
 
   useEffect(() => {
@@ -452,6 +463,7 @@ export function useSirenDetection({
     setBars(new Array(32).fill(0));
     sweepSinceRef.current = null;
     setSweepDetected(false);
+    stopAlertHapticPulse();
     stopAllAttentionAlerts();
     setDetectionHint("");
     setAudioContextState("running");
@@ -470,7 +482,6 @@ export function useSirenDetection({
       return;
     }
     setStatus("requesting");
-    unlockAttentionAlertsFromGesture();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -535,7 +546,6 @@ export function useSirenDetection({
 
     stop();
     setStatus("requesting");
-    unlockAttentionAlertsFromGesture();
 
     try {
       const AudioCtx =

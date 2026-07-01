@@ -14,11 +14,15 @@ export type SirenAlertPayload = {
 import { isAlertsSnoozed } from "@/lib/alertSnooze";
 
 const NOTIFY_COOLDOWN_MS = 5000;
+const HAPTIC_PULSE_MS = 2200;
 const ICON = "/icons/icon-192.png";
 const BADGE = "/icons/badge.svg";
+const HAPTIC_VIBRATE = [280, 90, 280, 90, 280, 120, 400];
 
 let swRegistration: ServiceWorkerRegistration | null = null;
 let lastNotifyAt = 0;
+let lastHapticPulseAt = 0;
+let hapticPulseTimer: ReturnType<typeof setInterval> | null = null;
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -132,6 +136,45 @@ export async function notifySirenAlert(
   }
 
   new Notification("Siren detected", { body, icon: ICON });
+}
+
+/** Vibrate via notification API — works without a recent user tap (when permission granted). */
+export async function pulseAlertHaptic(): Promise<void> {
+  if (getNotificationStatus() !== "granted") return;
+  if (isAlertsSnoozed()) return;
+
+  const now = Date.now();
+  if (now - lastHapticPulseAt < HAPTIC_PULSE_MS) return;
+  lastHapticPulseAt = now;
+
+  const registration = await getServiceWorkerRegistration();
+  if (!registration?.showNotification) return;
+
+  await registration.showNotification("Siren detected", {
+    body: "Emergency siren pattern detected nearby.",
+    icon: ICON,
+    badge: BADGE,
+    tag: "siren-alert-haptic",
+    renotify: true,
+    vibrate: HAPTIC_VIBRATE,
+    silent: false,
+    data: { url: "/" },
+  } as NotificationOptions);
+}
+
+export function startAlertHapticPulse(): void {
+  stopAlertHapticPulse();
+  void pulseAlertHaptic();
+  hapticPulseTimer = setInterval(() => {
+    void pulseAlertHaptic();
+  }, HAPTIC_PULSE_MS);
+}
+
+export function stopAlertHapticPulse(): void {
+  if (hapticPulseTimer !== null) {
+    clearInterval(hapticPulseTimer);
+    hapticPulseTimer = null;
+  }
 }
 
 export async function subscribeToPush(): Promise<PushSubscription | null> {
