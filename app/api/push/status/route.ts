@@ -4,14 +4,17 @@ import { isPushServerConfigured } from "@/lib/push/send";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const hasPublicKey = Boolean(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim());
-  const hasPrivateKey = Boolean(process.env.VAPID_PRIVATE_KEY?.trim());
-  const hasSubject = Boolean(process.env.VAPID_SUBJECT?.trim());
+  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim() ?? "";
+  const privateKey = process.env.VAPID_PRIVATE_KEY?.trim() ?? "";
+  const subject = process.env.VAPID_SUBJECT?.trim() ?? "";
 
   return Response.json({
     configured: isPushServerConfigured(),
-    hasPublicKey,
-    hasPrivateKey,
-    hasSubject,
+    hasPublicKey: Boolean(publicKey),
+    hasPrivateKey: Boolean(privateKey),
+    hasSubject: Boolean(subject),
+    // Safe diagnostics — lengths only, never the key values.
+    publicKeyLength: publicKey.length,
+    privateKeyLength: privateKey.length,
   });
 }
