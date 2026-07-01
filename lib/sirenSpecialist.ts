@@ -1,7 +1,30 @@
 import { getTf } from "./tfLoader";
 
+const DEFAULT_MODEL_PATH = "/models/siren-specialist/model.json";
 const MODEL_URL =
-  process.env.NEXT_PUBLIC_SIREN_MODEL_URL ?? "/models/siren-specialist/model.json";
+  process.env.NEXT_PUBLIC_SIREN_MODEL_URL ?? DEFAULT_MODEL_PATH;
+
+let modelProbe: Promise<boolean> | null = null;
+
+async function isModelAvailable(): Promise<boolean> {
+  if (MODEL_URL !== DEFAULT_MODEL_PATH) return true;
+  if (modelProbe) return modelProbe;
+
+  modelProbe = (async () => {
+    if (typeof fetch === "undefined") return false;
+    try {
+      const res = await fetch(DEFAULT_MODEL_PATH, {
+        method: "HEAD",
+        cache: "no-store",
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  })();
+
+  return modelProbe;
+}
 
 export type SpecialistState = "unloaded" | "loading" | "ready" | "fallback" | "error";
 
@@ -31,6 +54,12 @@ export async function loadSirenSpecialist(
 
   loadPromise = (async () => {
     try {
+      if (!(await isModelAvailable())) {
+        state = "fallback";
+        onStateChange?.("fallback");
+        return;
+      }
+
       const tf = await getTf();
       await tf.ready();
       try {

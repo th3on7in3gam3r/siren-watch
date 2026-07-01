@@ -168,6 +168,7 @@ export function SettingsTab({
         status={remotePush.status}
         loading={remotePush.loading}
         configured={remotePush.configured}
+        serverReady={remotePush.serverReady}
         enabled={settings.remotePushEnabled}
         onEnable={onRemoteEnable}
         onDisable={onRemoteDisable}

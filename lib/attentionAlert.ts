@@ -4,13 +4,23 @@ const VIBRATE_REPEAT_MS = 2200;
 let vibrateTimer: ReturnType<typeof setInterval> | null = null;
 let titleTimer: ReturnType<typeof setInterval> | null = null;
 let savedTitle = "";
+let gestureUnlocked = false;
+
+/** Chrome requires a user gesture before navigator.vibrate. */
+export function unlockAttentionAlertsFromGesture(): void {
+  gestureUnlocked = true;
+}
+
+export function isAttentionGestureUnlocked(): boolean {
+  return gestureUnlocked;
+}
 
 export function isVibrationSupported(): boolean {
   return typeof navigator !== "undefined" && "vibrate" in navigator;
 }
 
 export function startSirenVibration(): void {
-  if (!isVibrationSupported()) return;
+  if (!isVibrationSupported() || !gestureUnlocked) return;
   stopSirenVibration();
   navigator.vibrate(VIBRATE_PATTERN);
   vibrateTimer = setInterval(() => {

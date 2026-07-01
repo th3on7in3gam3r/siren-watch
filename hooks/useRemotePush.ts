@@ -5,6 +5,7 @@ import {
   disableRemotePush,
   enableRemotePush,
   getRemotePushSubscription,
+  isPushServerReady,
   isRemotePushConfigured,
   type RemotePushStatus,
 } from "@/lib/notifications";
@@ -12,10 +13,18 @@ import {
 export function useRemotePush() {
   const [status, setStatus] = useState<RemotePushStatus>("not-subscribed");
   const [loading, setLoading] = useState(false);
+  const [serverReady, setServerReady] = useState<boolean | null>(null);
 
   const refresh = useCallback(async () => {
     if (!isRemotePushConfigured()) {
       setStatus("no-vapid");
+      setServerReady(false);
+      return;
+    }
+    const ready = await isPushServerReady();
+    setServerReady(ready);
+    if (!ready) {
+      setStatus("server-unconfigured");
       return;
     }
     const sub = await getRemotePushSubscription();
@@ -51,6 +60,7 @@ export function useRemotePush() {
     status,
     loading,
     configured: isRemotePushConfigured(),
+    serverReady,
     enable,
     disable,
     refresh,

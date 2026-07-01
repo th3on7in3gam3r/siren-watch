@@ -34,6 +34,7 @@ import {
   startSirenAlertTone,
   startTitleFlash,
   stopAllAttentionAlerts,
+  unlockAttentionAlertsFromGesture,
 } from "@/lib/attentionAlert";
 import type { DetectionSettings } from "@/lib/settings";
 import type { HistoryRecord } from "@/lib/detectionHistory";
@@ -469,6 +470,7 @@ export function useSirenDetection({
       return;
     }
     setStatus("requesting");
+    unlockAttentionAlertsFromGesture();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -508,7 +510,14 @@ export function useSirenDetection({
       loadMlModels();
 
       if (settingsRef.current.remotePushEnabled) {
-        void enableRemotePush();
+        void enableRemotePush().then((status) => {
+          if (status === "server-unconfigured") {
+            settingsRef.current = {
+              ...settingsRef.current,
+              remotePushEnabled: false,
+            };
+          }
+        });
       }
     } catch (err) {
       setStatus("denied");
@@ -526,6 +535,7 @@ export function useSirenDetection({
 
     stop();
     setStatus("requesting");
+    unlockAttentionAlertsFromGesture();
 
     try {
       const AudioCtx =

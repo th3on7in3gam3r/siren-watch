@@ -155,12 +155,33 @@ export async function subscribeToPush(): Promise<PushSubscription | null> {
 export type RemotePushStatus =
   | "unsupported"
   | "no-vapid"
+  | "server-unconfigured"
   | "not-subscribed"
   | "subscribed"
   | "error";
 
 export function isRemotePushConfigured(): boolean {
   return Boolean(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
+}
+
+let serverPushReady: boolean | null = null;
+
+export async function isPushServerReady(): Promise<boolean> {
+  if (!isRemotePushConfigured()) return false;
+  if (serverPushReady !== null) return serverPushReady;
+  try {
+    const res = await fetch("/api/push/status", { cache: "no-store" });
+    if (!res.ok) {
+      serverPushReady = false;
+      return false;
+    }
+    const data = (await res.json()) as { configured?: boolean };
+    serverPushReady = Boolean(data.configured);
+    return serverPushReady;
+  } catch {
+    serverPushReady = false;
+    return false;
+  }
 }
 
 export async function getRemotePushSubscription(): Promise<PushSubscription | null> {
@@ -171,6 +192,9 @@ export async function getRemotePushSubscription(): Promise<PushSubscription | nu
 
 export async function enableRemotePush(): Promise<RemotePushStatus> {
   if (!isRemotePushConfigured()) return "no-vapid";
+
+  const serverReady = await isPushServerReady();
+  if (!serverReady) return "server-unconfigured";
 
   const permission = await ensureNotificationsReady();
   if (permission !== "granted") return "unsupported";
@@ -184,6 +208,7 @@ export async function enableRemotePush(): Promise<RemotePushStatus> {
     body: JSON.stringify(sub.toJSON()),
   });
 
+  if (res.status === 503) return "server-unconfigured";
   if (!res.ok) return "error";
   return "subscribed";
 }

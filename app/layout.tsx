@@ -4,7 +4,7 @@ import { MonitoringInit } from "@/components/MonitoringInit";
 import "./globals.css";
 
 const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://sirenwatch.app";
+  process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://sirenwatch.app";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -50,6 +50,9 @@ export const metadata: Metadata = {
   },
   formatDetection: {
     telephone: false,
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
   },
 };
 

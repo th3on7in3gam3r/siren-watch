@@ -4,6 +4,7 @@ type RemotePushPanelProps = {
   status: RemotePushStatus;
   loading: boolean;
   configured: boolean;
+  serverReady: boolean | null;
   enabled: boolean;
   onEnable: () => void;
   onDisable: () => void;
@@ -14,6 +15,7 @@ export function RemotePushPanel({
   status,
   loading,
   configured,
+  serverReady,
   enabled,
   onEnable,
   onDisable,
@@ -33,6 +35,12 @@ export function RemotePushPanel({
       {!configured ? (
         <p className="text-xs text-amber">
           Add VAPID keys to your environment to enable remote push.
+        </p>
+      ) : serverReady === false ? (
+        <p className="text-xs text-amber">
+          Public VAPID key is set in the browser, but{" "}
+          <code className="text-paper">VAPID_PRIVATE_KEY</code> is missing on
+          Vercel. Add it under Project → Environment Variables, then redeploy.
         </p>
       ) : (
         <>
@@ -56,6 +64,8 @@ export function RemotePushPanel({
               >
                 {status === "subscribed"
                   ? "active"
+                  : status === "server-unconfigured"
+                  ? "server not configured"
                   : status === "no-vapid"
                   ? "not configured"
                   : status === "unsupported"
