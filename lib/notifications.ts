@@ -209,6 +209,27 @@ export function isRemotePushConfigured(): boolean {
 
 let serverPushReady: boolean | null = null;
 
+export function resetPushServerCache(): void {
+  serverPushReady = null;
+}
+
+export function remotePushStatusMessage(
+  status: RemotePushStatus
+): string | null {
+  switch (status) {
+    case "server-unconfigured":
+      return "Server push is not configured. Add VAPID_PRIVATE_KEY on Vercel, then redeploy.";
+    case "unsupported":
+      return "Allow notifications in your browser, then try again.";
+    case "no-vapid":
+      return "Add NEXT_PUBLIC_VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY to your environment.";
+    case "error":
+      return "Registration failed. Check notification permission and try again.";
+    default:
+      return null;
+  }
+}
+
 export async function isPushServerReady(): Promise<boolean> {
   if (!isRemotePushConfigured()) return false;
   if (serverPushReady !== null) return serverPushReady;
@@ -236,24 +257,33 @@ export async function getRemotePushSubscription(): Promise<PushSubscription | nu
 export async function enableRemotePush(): Promise<RemotePushStatus> {
   if (!isRemotePushConfigured()) return "no-vapid";
 
+  resetPushServerCache();
   const serverReady = await isPushServerReady();
   if (!serverReady) return "server-unconfigured";
 
   const permission = await ensureNotificationsReady();
   if (permission !== "granted") return "unsupported";
 
-  const sub = await subscribeToPush();
-  if (!sub) return "error";
+  await registerServiceWorker();
+  const registration = await getServiceWorkerRegistration();
+  if (!registration?.pushManager) return "error";
 
-  const res = await fetch("/api/push/subscribe", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(sub.toJSON()),
-  });
+  try {
+    const sub = await subscribeToPush();
+    if (!sub) return "error";
 
-  if (res.status === 503) return "server-unconfigured";
-  if (!res.ok) return "error";
-  return "subscribed";
+    const res = await fetch("/api/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(sub.toJSON()),
+    });
+
+    if (res.status === 503) return "server-unconfigured";
+    if (!res.ok) return "error";
+    return "subscribed";
+  } catch {
+    return "error";
+  }
 }
 
 export async function disableRemotePush(): Promise<void> {

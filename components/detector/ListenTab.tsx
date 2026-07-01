@@ -22,6 +22,8 @@ type ListenTabProps = {
   remotePushSubscribed?: boolean;
   onEnableRemotePush?: () => void;
   remotePushLoading?: boolean;
+  remotePushError?: string | null;
+  remotePushServerReady?: boolean | null;
 };
 
 export function ListenTab({
@@ -34,6 +36,8 @@ export function ListenTab({
   remotePushSubscribed,
   onEnableRemotePush,
   remotePushLoading,
+  remotePushError,
+  remotePushServerReady,
 }: ListenTabProps) {
   const isIdle =
     detection.status === "idle" ||
@@ -110,22 +114,33 @@ export function ListenTab({
       {detection.status === "listening" &&
         !detection.isDemoMode &&
         remotePushConfigured &&
-        !remotePushSubscribed &&
-        onEnableRemotePush && (
+        !remotePushSubscribed && (
           <div className="mt-4 w-full rounded-sm border border-signal/30 bg-signal/5 px-3 py-3 text-xs leading-relaxed text-fog">
             <p>
               <span className="font-semibold text-signal">Background alerts:</span>{" "}
               Register this device for Web Push so you can get notified when the
               tab is closed (within OS limits).
             </p>
-            <button
-              type="button"
-              disabled={remotePushLoading}
-              onClick={onEnableRemotePush}
-              className="mt-2 rounded-sm border border-signal/40 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-signal transition hover:bg-signal/10 disabled:opacity-40"
-            >
-              {remotePushLoading ? "Registering…" : "Enable push backup"}
-            </button>
+            {remotePushError && (
+              <p className="mt-2 text-amber">{remotePushError}</p>
+            )}
+            {remotePushServerReady === false && !remotePushError && (
+              <p className="mt-2 text-amber">
+                Server push is not configured. Add{" "}
+                <code className="text-paper">VAPID_PRIVATE_KEY</code> on Vercel,
+                then redeploy.
+              </p>
+            )}
+            {onEnableRemotePush && (
+              <button
+                type="button"
+                disabled={remotePushLoading || remotePushServerReady === false}
+                onClick={onEnableRemotePush}
+                className="mt-2 rounded-sm border border-signal/40 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-signal transition hover:bg-signal/10 disabled:opacity-40"
+              >
+                {remotePushLoading ? "Registering…" : "Enable push backup"}
+              </button>
+            )}
           </div>
         )}
 

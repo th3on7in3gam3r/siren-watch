@@ -20,6 +20,7 @@ export type ConfidenceState = {
   confidence: number;
   yamnetScore: number;
   specialistScore: number;
+  speechScore: number;
   lastEvidenceAt: number | null;
 };
 
@@ -27,6 +28,9 @@ const HISTORY_QUIET_MS = 600;
 const HISTORY_LOUD_MS = 2200;
 const NO_EVIDENCE_FAST_DECAY_MS = 2000;
 const NO_EVIDENCE_HARD_DECAY_MS = 4000;
+const MIN_ALERT_SUSTAIN_MS = 1200;
+
+export { MIN_ALERT_SUSTAIN_MS };
 
 export function updateConfidence(
   state: ConfidenceState,
@@ -73,11 +77,22 @@ export function blendDetectionScores(
   specialistConf: number,
   yamnetConf: number,
   hasYamnetSignal: boolean,
-  sustainedSweepMs: number
+  sustainedSweepMs: number,
+  speechScore = 0
 ): number {
-  const acoustic = Math.max(heuristicConf, specialistConf * 0.9);
+  let specialist = specialistConf;
+  if (speechScore >= 0.35 && yamnetConf < 0.2) {
+    specialist *= 0.35;
+  }
 
-  let blended = blendConfidence(acoustic, yamnetConf, hasYamnetSignal);
+  const acoustic = Math.max(heuristicConf, specialist * 0.9);
+
+  let blended = blendConfidence(
+    acoustic,
+    yamnetConf,
+    hasYamnetSignal,
+    speechScore
+  );
 
   if (sustainedSweepMs >= 2000 && heuristicConf >= 0.5) {
     blended = Math.max(blended, heuristicConf);
@@ -128,7 +143,8 @@ export function runDetectionStep(
     confidenceState.specialistScore,
     confidenceState.yamnetScore,
     hasYamnetSignal,
-    sustainedSweepMs
+    sustainedSweepMs,
+    confidenceState.speechScore
   );
 
   return {

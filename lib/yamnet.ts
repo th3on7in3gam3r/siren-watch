@@ -22,6 +22,7 @@ export type ClassificationResult = {
   topClasses: { label: string; score: number }[];
   sirenScore: number;
   sirenLabel: string | null;
+  speechScore: number;
 };
 
 type GraphModel = Awaited<ReturnType<Awaited<ReturnType<typeof getTf>>["loadGraphModel"]>>;
@@ -33,6 +34,31 @@ let loadPromise: Promise<void> | null = null;
 function isEmergencyLabel(label: string): boolean {
   const lower = label.toLowerCase();
   return lower.includes("siren") || lower === "emergency vehicle";
+}
+
+function isSpeechLabel(label: string): boolean {
+  const lower = label.toLowerCase();
+  return (
+    lower.includes("speech") ||
+    lower.includes("conversation") ||
+    lower.includes("narration") ||
+    lower.includes("babble") ||
+    lower.includes("chatter") ||
+    lower.includes("talking") ||
+    lower === "speech"
+  );
+}
+
+function scoreSpeechClasses(
+  ranked: { label: string; score: number }[]
+): number {
+  let best = 0;
+  for (const entry of ranked) {
+    if (isSpeechLabel(entry.label)) {
+      best = Math.max(best, entry.score);
+    }
+  }
+  return best;
 }
 
 function parseCsvClassNames(csv: string): string[] {
@@ -144,6 +170,7 @@ export async function classifyWaveform(
       topClasses: ranked.slice(0, 5),
       sirenScore: bestEmergency?.score ?? 0,
       sirenLabel: bestEmergency?.label ?? null,
+      speechScore: scoreSpeechClasses(ranked),
     };
   }) as ClassificationResult;
 }

@@ -205,6 +205,7 @@ export function runHarnessCase(
     confidence: 0,
     yamnetScore: 0,
     specialistScore: 0,
+    speechScore: 0,
     lastEvidenceAt: null,
   };
   let sweepSince: number | null = null;

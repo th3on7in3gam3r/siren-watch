@@ -68,19 +68,36 @@ export function evaluateSweep(
   }
 
   const avgDb = history.reduce((sum, s) => sum + s.db, 0) / history.length;
-  return (
-    reversals >= 2 &&
-    reversals <= 40 &&
-    avgDb > settings.loudnessFloorDb
-  );
+  if (avgDb <= settings.loudnessFloorDb) return false;
+
+  // Speech formants cause many small, irregular pitch jumps — not yelp sweeps.
+  if (reversals > 22) return false;
+  if (reversals < 3) return false;
+
+  // Sirens sweep a wide band; narrow wobble is usually voice or noise.
+  if (swing < settings.swingThresholdHz) return false;
+  const midHz = (min + max) / 2;
+  const spanRatio = swing / Math.max(midHz, 1);
+  if (spanRatio < 0.18) return false;
+
+  return true;
 }
 
 export function blendConfidence(
   heuristicConf: number,
   yamnetConf: number,
-  hasYamnetSignal: boolean
+  hasYamnetSignal: boolean,
+  speechScore = 0
 ): number {
   if (!hasYamnetSignal) return heuristicConf;
+
+  // Strong speech + weak siren → likely conversation, not emergency siren.
+  if (speechScore >= 0.32 && yamnetConf < 0.18) {
+    return heuristicConf * 0.25;
+  }
+  if (speechScore >= 0.45 && yamnetConf < 0.28) {
+    return heuristicConf * 0.4;
+  }
 
   // Low AI siren score usually means inconclusive (phone speakers, YouTube,
   // re-recorded audio) — not a confident "not a siren". Trust the sweep.

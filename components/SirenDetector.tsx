@@ -133,6 +133,8 @@ export default function SirenDetector() {
           remotePushConfigured={remotePush.configured}
           remotePushSubscribed={remotePush.status === "subscribed"}
           remotePushLoading={remotePush.loading}
+          remotePushError={remotePush.errorMessage}
+          remotePushServerReady={remotePush.serverReady}
           onEnableRemotePush={() => {
             void remotePush.enable().then((next) => {
               if (next === "subscribed") {

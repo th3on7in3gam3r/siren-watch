@@ -10,6 +10,7 @@ import {
 } from "@/lib/detection";
 import {
   runDetectionStep,
+  MIN_ALERT_SUSTAIN_MS,
   type ConfidenceState,
 } from "@/lib/detectionEngine";
 import {
@@ -116,6 +117,7 @@ export function useSirenDetection({
     confidence: 0,
     yamnetScore: 0,
     specialistScore: 0,
+    speechScore: 0,
     lastEvidenceAt: null,
   });
   const spectrumRef = useRef<{
@@ -259,7 +261,7 @@ export function useSirenDetection({
       lastEvidenceAt === null ? Infinity : now - lastEvidenceAt;
     const sustainedAlert = evidence || msSinceEvidence < 700;
 
-    if (!snoozed && blended >= threshold && sustainedAlert) {
+    if (!snoozed && blended >= threshold && sustainedAlert && sustainedSweepMs >= MIN_ALERT_SUSTAIN_MS) {
       setStatus("alert");
       if (!demoModeRef.current && now - lastLoggedRef.current > LOG_COOLDOWN_MS) {
         lastLoggedRef.current = now;
@@ -312,6 +314,8 @@ export function useSirenDetection({
         if (result) {
           confidenceStateRef.current.yamnetScore +=
             (result.sirenScore - confidenceStateRef.current.yamnetScore) * 0.4;
+          confidenceStateRef.current.speechScore +=
+            (result.speechScore - confidenceStateRef.current.speechScore) * 0.45;
           yamnetScoreRef.current = confidenceStateRef.current.yamnetScore;
           yamnetTopRef.current = result;
           setYamnetScore(confidenceStateRef.current.yamnetScore);
@@ -448,6 +452,7 @@ export function useSirenDetection({
       confidence: 0,
       yamnetScore: 0,
       specialistScore: 0,
+      speechScore: 0,
       lastEvidenceAt: null,
     };
     yamnetScoreRef.current = 0;
