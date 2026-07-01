@@ -37,6 +37,7 @@ export default function SirenDetector() {
     clearHistory,
     exportCsv,
     reportFalsePositive,
+    logAndReportFalsePositive,
   } = useDetectionHistory();
 
   const calibration = useCalibration(replaceSettings);
@@ -71,17 +72,39 @@ export default function SirenDetector() {
     if (latest) void handleShare(latest);
   }, [history, handleShare]);
 
+  const handleDismissFalsePositive = useCallback(async () => {
+    detection.dismissFalsePositive();
+
+    const latest = history[0];
+    const isRecent =
+      latest && Date.now() - latest.timestamp < 60_000;
+
+    if (isRecent && latest) {
+      await reportFalsePositive(latest.id);
+      return;
+    }
+
+    await logAndReportFalsePositive({
+      peakFreq: detection.peakFreq,
+      loudnessDb: detection.loudnessDb,
+      confidence: detection.confidence,
+      aiLabel: detection.yamnetTop?.sirenLabel ?? null,
+    });
+  }, [detection, history, logAndReportFalsePositive, reportFalsePositive]);
+
   const handleFalsePositive = useCallback(
     async (record: HistoryRecord) => {
+      if (detection.status === "alert") {
+        detection.dismissFalsePositive();
+      }
       await reportFalsePositive(record.id);
     },
-    [reportFalsePositive]
+    [detection, reportFalsePositive]
   );
 
   const handleFalsePositiveLatest = useCallback(() => {
-    const latest = history[0];
-    if (latest) void handleFalsePositive(latest);
-  }, [history, handleFalsePositive]);
+    void handleDismissFalsePositive();
+  }, [handleDismissFalsePositive]);
 
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col px-5 py-8 sm:max-w-lg">
@@ -128,7 +151,9 @@ export default function SirenDetector() {
           onShareLast={history.length > 0 ? handleShareLast : undefined}
           shareBusy={shareBusyId !== null}
           onFalsePositive={
-            history.length > 0 ? handleFalsePositiveLatest : undefined
+            detection.status === "alert" && !detection.isDemoMode
+              ? handleFalsePositiveLatest
+              : undefined
           }
           remotePushConfigured={remotePush.configured}
           remotePushSubscribed={remotePush.status === "subscribed"}

@@ -40,6 +40,7 @@ export async function addDetection(
     loudnessDb: record.loudnessDb,
     confidence: record.confidence,
     aiLabel: record.aiLabel,
+    feedback: record.feedback ?? null,
   };
 
   const db = await openDb();
@@ -93,7 +94,7 @@ export async function clearDetections(): Promise<void> {
   });
 }
 
-export async function markFalsePositive(id: string): Promise<void> {
+export async function markFalsePositive(id: string): Promise<boolean> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
@@ -102,17 +103,24 @@ export async function markFalsePositive(id: string): Promise<void> {
     getReq.onsuccess = () => {
       const record = getReq.result as HistoryRecord | undefined;
       if (!record) {
-        resolve();
+        resolve(false);
         return;
       }
       store.put({ ...record, feedback: "false_positive" });
     };
+    getReq.onerror = () => reject(getReq.error);
     tx.oncomplete = () => {
       db.close();
-      resolve();
+      resolve(true);
     };
     tx.onerror = () => reject(tx.error);
   });
+}
+
+export async function logFalsePositive(
+  record: Omit<HistoryRecord, "id" | "timestamp" | "feedback">
+): Promise<HistoryRecord> {
+  return addDetection({ ...record, feedback: "false_positive" });
 }
 
 export function exportHistoryCsv(records: HistoryRecord[]): string {

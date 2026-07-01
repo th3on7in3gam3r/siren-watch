@@ -23,7 +23,7 @@ import {
   stopAlertHapticPulse,
   type NotificationStatus,
 } from "@/lib/notifications";
-import { isAlertsSnoozed } from "@/lib/alertSnooze";
+import { isAlertsSnoozed, snoozeForMinutes } from "@/lib/alertSnooze";
 import { reportError, reportEvent } from "@/lib/monitoring";
 import { synthesizeDemoSiren } from "@/lib/testHarness";
 import {
@@ -590,6 +590,30 @@ export function useSirenDetection({
     }
   }, [connectWorklet, loadMlModels, startUiLoop, stop]);
 
+  const dismissFalsePositive = useCallback(() => {
+    snoozeForMinutes(5);
+    historyRef.current = [];
+    sweepSinceRef.current = null;
+    confidenceStateRef.current = {
+      confidence: 0,
+      yamnetScore: 0,
+      specialistScore: 0,
+      speechScore: 0,
+      lastEvidenceAt: null,
+    };
+    yamnetScoreRef.current = 0;
+    yamnetTopRef.current = null;
+    setConfidence(0);
+    setHeuristicConfidence(0);
+    setYamnetScore(0);
+    setSpecialistScore(0);
+    setSweepDetected(false);
+    setStatus("listening");
+    setDetectionHint("Marked as not a siren — alerts snoozed for 5 minutes.");
+    stopAlertHapticPulse();
+    stopAllAttentionAlerts();
+  }, []);
+
   const toggleWakeLock = useCallback(async () => {
     const next = !settingsRef.current.wakeLockEnabled;
     settingsRef.current = { ...settingsRef.current, wakeLockEnabled: next };
@@ -633,6 +657,7 @@ export function useSirenDetection({
     start,
     startDemo,
     stop,
+    dismissFalsePositive,
     toggleWakeLock,
     listening: status === "listening" || status === "possible" || status === "alert",
   };

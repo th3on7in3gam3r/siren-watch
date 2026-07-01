@@ -10,7 +10,11 @@ export function SnoozeBanner() {
     const tick = () => setUntil(getSnoozeUntil());
     tick();
     const id = setInterval(tick, 5000);
-    return () => clearInterval(id);
+    window.addEventListener("siren-snooze-changed", tick);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("siren-snooze-changed", tick);
+    };
   }, []);
 
   if (!until) return null;

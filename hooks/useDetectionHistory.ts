@@ -6,6 +6,7 @@ import {
   clearDetections,
   downloadCsv,
   getRecentDetections,
+  logFalsePositive,
   markFalsePositive,
   type HistoryRecord,
 } from "@/lib/detectionHistory";
@@ -49,13 +50,25 @@ export function useDetectionHistory() {
   }, [history]);
 
   const reportFalsePositive = useCallback(async (id: string) => {
-    await markFalsePositive(id);
-    setHistory((prev) =>
-      prev.map((r) =>
-        r.id === id ? { ...r, feedback: "false_positive" as const } : r
-      )
-    );
+    const ok = await markFalsePositive(id);
+    if (ok) {
+      setHistory((prev) =>
+        prev.map((r) =>
+          r.id === id ? { ...r, feedback: "false_positive" as const } : r
+        )
+      );
+    }
+    return ok;
   }, []);
+
+  const logAndReportFalsePositive = useCallback(
+    async (record: Omit<HistoryRecord, "id" | "timestamp" | "feedback">) => {
+      const entry = await logFalsePositive(record);
+      setHistory((prev) => [entry, ...prev].slice(0, 50));
+      return entry;
+    },
+    []
+  );
 
   return {
     history,
@@ -65,5 +78,6 @@ export function useDetectionHistory() {
     clearHistory,
     exportCsv,
     reportFalsePositive,
+    logAndReportFalsePositive,
   };
 }

@@ -8,12 +8,16 @@ export function setSnoozeUntil(untilMs: number): void {
 export function snoozeForMinutes(minutes: number): number {
   const until = Date.now() + minutes * 60 * 1000;
   setSnoozeUntil(until);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("siren-snooze-changed"));
+  }
   return until;
 }
 
 export function clearSnooze(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(SNOOZE_KEY);
+  window.dispatchEvent(new CustomEvent("siren-snooze-changed"));
 }
 
 export function getSnoozeUntil(): number | null {

@@ -92,7 +92,7 @@ export function ListenTab({
           {onFalsePositive && (
             <button
               type="button"
-              onClick={onFalsePositive}
+              onClick={() => onFalsePositive()}
               className="flex-1 rounded-sm border border-amber/40 py-2.5 text-xs font-semibold uppercase tracking-widest text-amber transition hover:bg-amber/10"
             >
               Not a siren
