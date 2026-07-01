@@ -1,6 +1,8 @@
 import { savePushSubscription, type StoredPushSubscription } from "@/lib/push/store";
 import { isPushServerConfigured } from "@/lib/push/send";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   if (!isPushServerConfigured()) {
     return Response.json(

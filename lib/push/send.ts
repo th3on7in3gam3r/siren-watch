@@ -83,6 +83,7 @@ export async function broadcastPushAlert(
 
 export function isPushServerConfigured(): boolean {
   return Boolean(
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim() &&
+      process.env.VAPID_PRIVATE_KEY?.trim()
   );
 }

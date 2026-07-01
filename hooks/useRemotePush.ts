@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   disableRemotePush,
   enableRemotePush,
+  getPushServerDetails,
   getRemotePushSubscription,
   isPushServerReady,
   isRemotePushConfigured,
@@ -30,7 +31,9 @@ export function useRemotePush() {
     setServerReady(ready);
     if (!ready) {
       setStatus("server-unconfigured");
-      setErrorMessage(remotePushStatusMessage("server-unconfigured"));
+      setErrorMessage(
+        remotePushStatusMessage("server-unconfigured", getPushServerDetails() ?? undefined)
+      );
       return;
     }
     setErrorMessage(null);
@@ -51,7 +54,9 @@ export function useRemotePush() {
       if (next === "subscribed") {
         setErrorMessage(null);
       } else {
-        setErrorMessage(remotePushStatusMessage(next));
+        setErrorMessage(
+          remotePushStatusMessage(next, getPushServerDetails() ?? undefined)
+        );
       }
       if (next === "server-unconfigured") {
         setServerReady(false);

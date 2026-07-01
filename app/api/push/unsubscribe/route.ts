@@ -1,5 +1,7 @@
 import { removePushSubscription } from "@/lib/push/store";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   let endpoint: string | undefined;
   try {

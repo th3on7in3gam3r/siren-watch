@@ -208,17 +208,33 @@ export function isRemotePushConfigured(): boolean {
 }
 
 let serverPushReady: boolean | null = null;
+let serverPushDetails: {
+  hasPublicKey?: boolean;
+  hasPrivateKey?: boolean;
+} | null = null;
 
 export function resetPushServerCache(): void {
   serverPushReady = null;
+  serverPushDetails = null;
+}
+
+export function getPushServerDetails() {
+  return serverPushDetails;
 }
 
 export function remotePushStatusMessage(
-  status: RemotePushStatus
+  status: RemotePushStatus,
+  details?: { hasPublicKey?: boolean; hasPrivateKey?: boolean }
 ): string | null {
   switch (status) {
     case "server-unconfigured":
-      return "Server push is not configured. Add VAPID_PRIVATE_KEY on Vercel, then redeploy.";
+      if (details?.hasPublicKey && !details?.hasPrivateKey) {
+        return "VAPID_PRIVATE_KEY is missing on the server. Add it in Vercel → Environment Variables (Production), then redeploy.";
+      }
+      if (!details?.hasPublicKey && details?.hasPrivateKey) {
+        return "NEXT_PUBLIC_VAPID_PUBLIC_KEY is missing. Add it in Vercel, then redeploy.";
+      }
+      return "Push keys not found on server. Add both VAPID keys in Vercel → Environment Variables (Production), then redeploy.";
     case "unsupported":
       return "Allow notifications in your browser, then try again.";
     case "no-vapid":
@@ -239,7 +255,15 @@ export async function isPushServerReady(): Promise<boolean> {
       serverPushReady = false;
       return false;
     }
-    const data = (await res.json()) as { configured?: boolean };
+    const data = (await res.json()) as {
+      configured?: boolean;
+      hasPublicKey?: boolean;
+      hasPrivateKey?: boolean;
+    };
+    serverPushDetails = {
+      hasPublicKey: data.hasPublicKey,
+      hasPrivateKey: data.hasPrivateKey,
+    };
     serverPushReady = Boolean(data.configured);
     return serverPushReady;
   } catch {
