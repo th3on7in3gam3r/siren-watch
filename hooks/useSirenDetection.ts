@@ -148,7 +148,9 @@ export function useSirenDetection({
 
   useEffect(() => {
     const settings = settingsRef.current;
-    if (status === "alert" && !isAlertsSnoozed()) {
+    const active =
+      status === "alert" && sweepDetected && !isAlertsSnoozed();
+    if (active) {
       if (settings.flashAlertEnabled) startTitleFlash();
       if (settings.hapticAlertEnabled) startSirenVibration();
       if (settings.soundAlertEnabled) startSirenAlertTone();
@@ -156,7 +158,7 @@ export function useSirenDetection({
       stopAllAttentionAlerts();
     }
     return stopAllAttentionAlerts;
-  }, [status, settingsRef]);
+  }, [status, sweepDetected, settingsRef]);
 
   useEffect(() => {
     const onVisibility = () => {
@@ -240,8 +242,12 @@ export function useSirenDetection({
 
     const threshold = settings.alertThreshold;
     const snoozed = isAlertsSnoozed();
+    const lastEvidenceAt = confidenceStateRef.current.lastEvidenceAt;
+    const msSinceEvidence =
+      lastEvidenceAt === null ? Infinity : now - lastEvidenceAt;
+    const sustainedAlert = evidence || msSinceEvidence < 700;
 
-    if (!snoozed && blended >= threshold) {
+    if (!snoozed && blended >= threshold && sustainedAlert) {
       setStatus("alert");
       if (!demoModeRef.current && now - lastLoggedRef.current > LOG_COOLDOWN_MS) {
         lastLoggedRef.current = now;

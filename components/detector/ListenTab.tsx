@@ -46,10 +46,18 @@ export function ListenTab({
       role="tabpanel"
       aria-label="Listen"
     >
-      <Radar status={detection.status} confidence={detection.confidence} />
+      <Radar
+        status={detection.status}
+        confidence={detection.confidence}
+        sweepDetected={detection.sweepDetected}
+      />
 
       <div className="mt-8 w-full">
-        <Spectrum bars={detection.bars} status={detection.status} />
+        <Spectrum
+          bars={detection.bars}
+          status={detection.status}
+          sweepDetected={detection.sweepDetected}
+        />
       </div>
 
       <ConfidenceBreakdown

@@ -24,8 +24,9 @@ export function DetectionFeedback({
 
   const tooQuiet = loudnessDb <= settings.loudnessFloorDb + 3;
   const steady = settings.steadyAlertEnabled;
+  const alerting = status === "alert" && sweepDetected;
   const borderClass =
-    status === "alert"
+    alerting
       ? "border-alert/40 bg-alert/10 text-alert"
       : status === "possible"
       ? "border-amber/40 bg-amber/10 text-amber"
@@ -36,18 +37,18 @@ export function DetectionFeedback({
   return (
     <div
       className={`mt-4 w-full rounded-sm border px-3 py-3 leading-relaxed ${
-        status === "alert"
+        alerting
           ? "text-sm sm:text-base"
           : "text-xs"
       } ${
-        status === "alert" && !steady
+        alerting && !steady
           ? "motion-safe-alert-flash animate-alertBorder"
-          : status === "alert" && steady
+          : alerting && steady
           ? "border-alert bg-alert/15"
           : ""
       } ${borderClass}`}
     >
-      {status === "alert" && (
+      {alerting && (
         <p className="font-display text-xl font-bold uppercase tracking-[0.12em] sm:text-2xl">
           Siren detected — check surroundings
         </p>
@@ -57,7 +58,7 @@ export function DetectionFeedback({
           Possible siren — {Math.round(confidence * 100)}%
         </p>
       )}
-      <p className={status === "alert" || status === "possible" ? "mt-1 opacity-90" : ""}>
+      <p className={alerting || status === "possible" ? "mt-1 opacity-90" : ""}>
         {hint}
       </p>
       {sweepDetected && status !== "alert" && (

@@ -94,6 +94,7 @@ export default function SirenDetector() {
       <AlertFlashOverlay
         active={
           detection.status === "alert" &&
+          detection.sweepDetected &&
           settings.flashAlertEnabled
         }
         steady={settings.steadyAlertEnabled}

@@ -23,6 +23,8 @@ export type ConfidenceState = {
   lastEvidenceAt: number | null;
 };
 
+const HISTORY_QUIET_MS = 600;
+const HISTORY_LOUD_MS = 2200;
 const NO_EVIDENCE_FAST_DECAY_MS = 2000;
 const NO_EVIDENCE_HARD_DECAY_MS = 4000;
 
@@ -47,6 +49,8 @@ export function updateConfidence(
       decayRate = 0.42;
     } else if (silenceMs >= NO_EVIDENCE_FAST_DECAY_MS) {
       decayRate = 0.22;
+    } else if (silenceMs >= 400) {
+      decayRate = 0.18;
     }
   }
 
@@ -56,7 +60,7 @@ export function updateConfidence(
 
   if (!evidence) {
     const aiDecay =
-      silenceMs >= NO_EVIDENCE_FAST_DECAY_MS ? 0.18 : 0.05;
+      silenceMs >= 400 ? 0.22 : silenceMs >= NO_EVIDENCE_FAST_DECAY_MS ? 0.18 : 0.08;
     state.yamnetScore += (0 - state.yamnetScore) * aiDecay;
     state.specialistScore += (0 - state.specialistScore) * aiDecay;
   }
@@ -97,13 +101,16 @@ export function runDetectionStep(
   result: DetectionTickResult;
 } {
   const { peak, db, newBars: bars } = reading;
+  const loudEnough = db > settings.loudnessFloorDb;
 
-  if (db > settings.loudnessFloorDb) {
+  if (loudEnough) {
     history.push({ t: now, freq: peak, db });
   }
-  history = history.filter((s) => now - s.t <= 4000);
+  history = history.filter((s) =>
+    now - s.t <= (loudEnough ? HISTORY_LOUD_MS : HISTORY_QUIET_MS)
+  );
 
-  const evidence = evaluateSweep(history, settings);
+  const evidence = loudEnough && evaluateSweep(history, settings);
   let nextSweepSince = sweepSince;
   if (evidence) {
     if (nextSweepSince === null) nextSweepSince = now;

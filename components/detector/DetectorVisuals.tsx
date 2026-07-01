@@ -5,13 +5,15 @@ import type { ListeningStatus } from "@/hooks/useSirenDetection";
 export function Radar({
   status,
   confidence,
+  sweepDetected = false,
 }: {
   status: ListeningStatus;
   confidence: number;
+  sweepDetected?: boolean;
 }) {
   const active =
     status === "listening" || status === "possible" || status === "alert";
-  const alerting = status === "alert";
+  const alerting = status === "alert" && sweepDetected;
   const possible = status === "possible";
   return (
     <div className="relative flex h-56 w-56 items-center justify-center">
@@ -92,11 +94,13 @@ export function Radar({
 export function Spectrum({
   bars,
   status,
+  sweepDetected = false,
 }: {
   bars: number[];
   status: ListeningStatus;
+  sweepDetected?: boolean;
 }) {
-  const alerting = status === "alert";
+  const alerting = status === "alert" && sweepDetected;
   const possible = status === "possible";
   return (
     <div className="flex h-16 w-full items-end gap-[3px] rounded-sm border border-line bg-panel/60 px-3 py-2">
